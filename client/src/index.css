@@ -200,6 +200,11 @@ code {
   border: 1px solid var(--border);
   box-sizing: border-box;
   background: rgba(255, 255, 255, 0.92);
+  color: #111827;
+}
+
+.user-search::placeholder {
+  color: #6b7280;
 }
 
 .user-row { display: flex; align-items: center; gap: 12px; }
@@ -289,7 +294,8 @@ code {
 .message-meta { font-size: 12px; color: rgba(255, 255, 255, 0.62); text-align: right; }
 
 .composer { display: flex; gap: 10px; padding: 14px; border-top: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.02); }
-.composer input { flex: 1; padding: 14px 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.96); outline: none; }
+.composer input { flex: 1; padding: 14px 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.96); outline: none; color: #111827; }
+.composer input::placeholder { color: #6b7280; }
 .composer input:focus { border-color: rgba(248,113,113,0.35); box-shadow: 0 0 0 4px rgba(239,68,68,0.12); }
 .send-btn { padding: 12px 18px; border-radius: 16px; border: none; background: linear-gradient(135deg, #ef4444, #f97316); color: white; cursor: pointer; font-weight: 700; }
 .send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -391,6 +397,7 @@ code {
   border: 1px solid var(--border);
   background: var(--panel-strong);
   box-sizing: border-box;
+  color: #111827;
 }
 
 .auth-form input:focus {
