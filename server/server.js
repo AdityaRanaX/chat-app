@@ -37,16 +37,27 @@ const io = new Server(server, {
 });
 
 const onlineUsers = {};
+let lastPresenceSignature = "";
+
+const broadcastPresence = () => {
+  const presenceSignature = JSON.stringify(Object.keys(onlineUsers).sort());
+
+  if (presenceSignature === lastPresenceSignature) {
+    return;
+  }
+
+  lastPresenceSignature = presenceSignature;
+  io.emit("presence_update", Object.keys(onlineUsers));
+};
 
 io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
-
   socket.on("join", (userId) => {
-    onlineUsers[userId] = socket.id;
+    if (onlineUsers[userId] === socket.id) {
+      return;
+    }
 
-    console.log("Online Users:", onlineUsers);
-    // broadcast updated presence to all connected clients
-    io.emit("presence_update", Object.keys(onlineUsers));
+    onlineUsers[userId] = socket.id;
+    broadcastPresence();
   });
 
   socket.on("send_message", async (data) => {
@@ -71,15 +82,18 @@ io.on("connection", (socket) => {
 });
 
   socket.on("disconnect", () => {
+    let changed = false;
+
     for (const userId in onlineUsers) {
       if (onlineUsers[userId] === socket.id) {
         delete onlineUsers[userId];
+        changed = true;
       }
     }
 
-    console.log("User disconnected:", socket.id);
-    // broadcast updated presence after disconnect
-    io.emit("presence_update", Object.keys(onlineUsers));
+    if (changed) {
+      broadcastPresence();
+    }
   });
 });
 

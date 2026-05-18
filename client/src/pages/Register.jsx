@@ -1,6 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 function Register() {
   const navigate = useNavigate();
@@ -9,6 +9,8 @@ function Register() {
     name: "",
     email: "",
     password: "",
+    age: "",
+    phone: "",
   });
 
   const handleChange = (e) => {
@@ -25,16 +27,17 @@ function Register() {
 
     try {
 
-      const res = await axios.post(
+      await axios.post(
         "http://localhost:5000/api/auth/register",
         formData
       );
 
-      localStorage.setItem("userInfo", JSON.stringify(res.data));
-
-      alert("Registration Successful");
-
-      navigate("/chat");
+      navigate("/login", {
+        state: {
+          email: formData.email,
+          message: "Account created. Please log in to continue.",
+        },
+      });
 
     } catch (error) {
 
@@ -45,55 +48,98 @@ function Register() {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
+    <div className="auth-page auth-page-register">
+      <div className="auth-card-shell">
+        <section className="auth-info-panel auth-info-panel-register">
+          <div className="brand-pill">Chat App</div>
+          <h1>Join the room</h1>
+          <p>
+            Create your account once and keep your conversations, presence, and profile details in sync.
+          </p>
+          <div className="feature-list">
+            <div>Instant real-time chat</div>
+            <div>Presence and notifications</div>
+            <div>Secure private conversations</div>
+          </div>
+        </section>
 
-      <h1>Register</h1>
+        <section className="auth-form-panel">
+          <div className="auth-eyebrow">New account</div>
+          <h2>Register</h2>
+          <p className="auth-subcopy">Tell us a bit about yourself to get started.</p>
 
-      <form onSubmit={handleSubmit}>
+          <form className="auth-form" onSubmit={handleSubmit}>
+            <div className="form-grid two-up">
+              <label>
+                Name
+                <input
+                  type="text"
+                  name="name"
+                  placeholder="Enter Name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  autoComplete="name"
+                />
+              </label>
 
-        <input
-          type="text"
-          name="name"
-          placeholder="Enter Name"
-          value={formData.name}
-          onChange={handleChange}
-        />
+              <label>
+                Age
+                <input
+                  type="number"
+                  name="age"
+                  placeholder="Enter Age"
+                  value={formData.age}
+                  onChange={handleChange}
+                  min="1"
+                  autoComplete="off"
+                />
+              </label>
+            </div>
 
-        <br />
-        <br />
+            <label>
+              Email
+              <input
+                type="email"
+                name="email"
+                placeholder="Enter Email"
+                value={formData.email}
+                onChange={handleChange}
+                autoComplete="email"
+              />
+            </label>
 
-        <input
-          type="email"
-          name="email"
-          placeholder="Enter Email"
-          value={formData.email}
-          onChange={handleChange}
-        />
+            <label>
+              Phone Number
+              <input
+                type="tel"
+                name="phone"
+                placeholder="Enter Phone Number"
+                value={formData.phone}
+                onChange={handleChange}
+                autoComplete="tel"
+              />
+            </label>
 
-        <br />
-        <br />
+            <label>
+              Password
+              <input
+                type="password"
+                name="password"
+                placeholder="Enter Password"
+                value={formData.password}
+                onChange={handleChange}
+                autoComplete="new-password"
+              />
+            </label>
 
-        <input
-          type="password"
-          name="password"
-          placeholder="Enter Password"
-          value={formData.password}
-          onChange={handleChange}
-        />
+            <button type="submit" className="auth-button">Register</button>
+          </form>
 
-        <br />
-        <br />
-
-        <button type="submit">
-          Register
-        </button>
-
-      </form>
-
-      <p style={{ marginTop: "20px" }}>
-        Already have an account? <a href="/" style={{ color: "blue", cursor: "pointer" }}>Login here</a>
-      </p>
-
+          <p className="auth-footnote">
+            Already have an account? <Link to="/login">Login here</Link>
+          </p>
+        </section>
+      </div>
     </div>
   );
 }

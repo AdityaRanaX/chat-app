@@ -15,7 +15,7 @@ function ProtectedRoute({ children }) {
   }
 
   if (!userInfo) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return children;
@@ -27,9 +27,11 @@ function App() {
 
       <Routes>
 
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<Register />} />
 
         <Route path="/register" element={<Register />} />
+
+        <Route path="/login" element={<Login />} />
 
         <Route
           path="/chat"

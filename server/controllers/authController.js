@@ -4,11 +4,19 @@ import generateToken from "../utils/generateToken.js";
 
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, age, phone } = req.body;
 
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !age || !phone) {
       return res.status(400).json({
         message: "Please fill all fields",
+      });
+    }
+
+    const normalizedAge = Number(age);
+
+    if (Number.isNaN(normalizedAge) || normalizedAge < 1) {
+      return res.status(400).json({
+        message: "Please enter a valid age",
       });
     }
 
@@ -28,6 +36,8 @@ export const registerUser = async (req, res) => {
       name,
       email,
       password: hashedPassword,
+      age: normalizedAge,
+      phone,
     });
 
     res.status(201).json({
@@ -35,6 +45,8 @@ export const registerUser = async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      age: user.age,
+      phone: user.phone,
       token: generateToken(user._id),
     });
   } catch (error) {
@@ -75,6 +87,8 @@ export const loginUser = async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
+      age: user.age,
+      phone: user.phone,
       token: generateToken(user._id),
     });
   } catch (error) {
