@@ -1,7 +1,9 @@
 import { useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 function Register() {
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -28,9 +30,11 @@ function Register() {
         formData
       );
 
-      console.log(res.data);
+      localStorage.setItem("userInfo", JSON.stringify(res.data));
 
       alert("Registration Successful");
+
+      navigate("/chat");
 
     } catch (error) {
 

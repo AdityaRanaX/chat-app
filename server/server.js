@@ -9,6 +9,7 @@ import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import Message from "./models/Message.js";
 import messageRoutes from "./routes/messageRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/users", userRoutes);
 
 app.get("/", (req, res) => {
   res.send("Server running");
@@ -43,6 +45,8 @@ io.on("connection", (socket) => {
     onlineUsers[userId] = socket.id;
 
     console.log("Online Users:", onlineUsers);
+    // broadcast updated presence to all connected clients
+    io.emit("presence_update", Object.keys(onlineUsers));
   });
 
   socket.on("send_message", async (data) => {
@@ -61,8 +65,6 @@ io.on("connection", (socket) => {
       io.to(receiverSocketId).emit("receive_message", newMessage);
     }
 
-    socket.emit("receive_message", newMessage);
-
   } catch (error) {
     console.log(error);
   }
@@ -76,6 +78,8 @@ io.on("connection", (socket) => {
     }
 
     console.log("User disconnected:", socket.id);
+    // broadcast updated presence after disconnect
+    io.emit("presence_update", Object.keys(onlineUsers));
   });
 });
 

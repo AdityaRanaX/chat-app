@@ -1,8 +1,25 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Chat from "./pages/Chat";
+import NotFound from "./pages/NotFound";
+
+function ProtectedRoute({ children }) {
+  let userInfo = null;
+
+  try {
+    userInfo = JSON.parse(localStorage.getItem("userInfo"));
+  } catch {
+    localStorage.removeItem("userInfo");
+  }
+
+  if (!userInfo) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+}
 
 function App() {
   return (
@@ -14,7 +31,15 @@ function App() {
 
         <Route path="/register" element={<Register />} />
 
-        <Route path="/chat" element={<Chat />} />
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute>
+              <Chat />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<NotFound />} />
 
       </Routes>
 

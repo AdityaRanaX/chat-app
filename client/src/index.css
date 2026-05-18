@@ -109,3 +109,67 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* Chat styles */
+.chat-container {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 20px;
+  padding: 24px;
+  align-items: start;
+}
+
+.sidebar {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: left;
+  height: calc(100vh - 120px);
+  overflow-y: auto;
+  background: var(--code-bg);
+}
+
+.sidebar .muted {
+  color: var(--text);
+  opacity: 0.8;
+}
+
+.user-item {
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.user-item:hover { background: var(--accent-bg); }
+.user-item.selected { border: 1px solid var(--accent-border); background: var(--accent-bg); }
+
+.chat-window {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 120px);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.chat-header { padding: 16px; border-bottom: 1px solid var(--border); text-align: left; }
+.chat-subtitle { color: var(--text); font-size: 14px; margin-top: 6px; }
+
+.messages { flex: 1; padding: 16px; overflow-y: auto; background: var(--bg); }
+
+.message { display: flex; margin-bottom: 12px; }
+.message.sent { justify-content: flex-end; }
+.message.received { justify-content: flex-start; }
+
+.message-body { max-width: 70%; padding: 10px 12px; border-radius: 12px; box-shadow: var(--shadow); }
+.message.sent .message-body { background: var(--accent-bg); border: 1px solid var(--accent-border); color: var(--text-h); }
+.message.received .message-body { background: var(--code-bg); border: 1px solid var(--border); }
+
+.message-text { margin-bottom: 6px; }
+.message-meta { font-size: 12px; color: var(--text); opacity: 0.8; text-align: right; }
+
+.composer { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
+.composer input { flex: 1; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); }
+.send-btn { padding: 10px 14px; border-radius: 8px; border: none; background: var(--accent); color: white; cursor: pointer; }
+.send-btn:disabled { opacity: 0.6; cursor: not-allowed; }
