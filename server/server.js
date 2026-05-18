@@ -7,6 +7,8 @@ import { Server } from "socket.io";
 
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
+import Message from "./models/Message.js";
+import messageRoutes from "./routes/messageRoutes.js";
 
 dotenv.config();
 
@@ -18,6 +20,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
+app.use("/api/messages", messageRoutes);
 
 app.get("/", (req, res) => {
   res.send("Server running");
@@ -42,19 +45,28 @@ io.on("connection", (socket) => {
     console.log("Online Users:", onlineUsers);
   });
 
-  socket.on("send_message", (data) => {
-    const { senderId, receiverId, text } = data;
+  socket.on("send_message", async (data) => {
+  const { senderId, receiverId, text } = data;
+
+  try {
+    const newMessage = await Message.create({
+      senderId,
+      receiverId,
+      text,
+    });
 
     const receiverSocketId = onlineUsers[receiverId];
 
     if (receiverSocketId) {
-      io.to(receiverSocketId).emit("receive_message", {
-        senderId,
-        text,
-        time: new Date().toLocaleTimeString(),
-      });
+      io.to(receiverSocketId).emit("receive_message", newMessage);
     }
-  });
+
+    socket.emit("receive_message", newMessage);
+
+  } catch (error) {
+    console.log(error);
+  }
+});
 
   socket.on("disconnect", () => {
     for (const userId in onlineUsers) {
