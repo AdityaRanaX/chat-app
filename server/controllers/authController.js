@@ -47,6 +47,7 @@ export const registerUser = async (req, res) => {
       email: user.email,
       age: user.age,
       phone: user.phone,
+      profilePic: user.profilePic,
       token: generateToken(user._id),
     });
   } catch (error) {
@@ -89,7 +90,44 @@ export const loginUser = async (req, res) => {
       email: user.email,
       age: user.age,
       phone: user.phone,
+      profilePic: user.profilePic,
       token: generateToken(user._id),
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+export const updateUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    const { name, age, phone, profilePic } = req.body;
+
+    user.name = name ?? user.name;
+    user.age = age !== undefined ? Number(age) : user.age;
+    user.phone = phone ?? user.phone;
+    user.profilePic = profilePic ?? user.profilePic;
+
+    const updatedUser = await user.save();
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      age: updatedUser.age,
+      phone: updatedUser.phone,
+      profilePic: updatedUser.profilePic,
+      token: generateToken(updatedUser._id),
     });
   } catch (error) {
     res.status(500).json({

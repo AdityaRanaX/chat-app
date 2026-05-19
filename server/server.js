@@ -81,6 +81,10 @@ io.on("connection", (socket) => {
   }
 });
 
+  socket.on("profile_updated", (updatedUser) => {
+    io.emit("profile_updated", updatedUser);
+  });
+
   socket.on("disconnect", () => {
     let changed = false;
 

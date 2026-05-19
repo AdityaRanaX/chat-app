@@ -1,7 +1,52 @@
 import { useEffect, useRef, useState } from "react";
+import Cropper from "react-easy-crop";
 import socket from "../socket/socket";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+
+const getStoredUserInfo = () => {
+  try {
+    return JSON.parse(localStorage.getItem("userInfo")) || { _id: null };
+  } catch {
+    localStorage.removeItem("userInfo");
+    return { _id: null };
+  }
+};
+
+const createImage = (url) =>
+  new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener("load", () => resolve(image));
+    image.addEventListener("error", (error) => reject(error));
+    image.src = url;
+  });
+
+const getCroppedImage = async (imageSrc, cropPixels) => {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("Could not create canvas context");
+  }
+
+  canvas.width = cropPixels.width;
+  canvas.height = cropPixels.height;
+
+  context.drawImage(
+    image,
+    cropPixels.x,
+    cropPixels.y,
+    cropPixels.width,
+    cropPixels.height,
+    0,
+    0,
+    cropPixels.width,
+    cropPixels.height
+  );
+
+  return canvas.toDataURL("image/jpeg", 0.92);
+};
 
 function Chat() {
   const navigate = useNavigate();
@@ -13,22 +58,29 @@ function Chat() {
   const [notifications, setNotifications] = useState({});
   const [onlineUsersState, setOnlineUsersState] = useState({});
   const [userSearch, setUserSearch] = useState("");
+  const [currentUser, setCurrentUser] = useState(getStoredUserInfo);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [settingsError, setSettingsError] = useState("");
+  const [settingsForm, setSettingsForm] = useState({
+    profilePic: "",
+  });
+  const [theme, setTheme] = useState(() => localStorage.getItem("chatTheme") || "dark");
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState("");
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
   const messagesEndRef = useRef(null);
   const messageInputRef = useRef(null);
   const selectedUserRef = useRef(null);
+  const profileFileInputRef = useRef(null);
 
-  let userInfo = { _id: null };
-
-  try {
-    userInfo = JSON.parse(localStorage.getItem("userInfo")) || { _id: null };
-  } catch {
-    localStorage.removeItem("userInfo");
-  }
-
-  const senderId = userInfo._id;
-  const token = userInfo.token;
-  const currentUserName = userInfo.name || "User";
+  const senderId = currentUser._id;
+  const token = currentUser.token;
+  const currentUserName = currentUser.name || "User";
+  const currentUserAvatar = currentUser.profilePic || "";
   const receiverId = selectedUser?._id;
 
   const currentConvLength = selectedUser ? (messagesByUser[selectedUser._id]?.length || 0) : 0;
@@ -90,10 +142,26 @@ function Chat() {
 
     socket.on("presence_update", handlePresenceUpdate);
     socket.on("receive_message", handleReceiveMessage);
+    socket.on("profile_updated", (updatedUser) => {
+      if (!updatedUser?._id) return;
+
+      setUsers((prevUsers) =>
+        prevUsers.map((user) => (user._id === updatedUser._id ? { ...user, ...updatedUser } : user))
+      );
+
+      setCurrentUser((prevUser) =>
+        prevUser._id === updatedUser._id ? { ...prevUser, ...updatedUser } : prevUser
+      );
+
+      if (updatedUser._id === senderId) {
+        localStorage.setItem("userInfo", JSON.stringify(updatedUser));
+      }
+    });
 
     return () => {
       socket.off("presence_update", handlePresenceUpdate);
       socket.off("receive_message", handleReceiveMessage);
+      socket.off("profile_updated");
     };
   }, [senderId]);
 
@@ -135,6 +203,19 @@ function Chat() {
   useEffect(() => {
     selectedUserRef.current = selectedUser;
   }, [selectedUser]);
+
+  const openSettings = () => {
+    setSettingsForm({
+      profilePic: currentUser.profilePic || "",
+    });
+    setSettingsError("");
+    setSettingsOpen(true);
+  };
+
+  useEffect(() => {
+    document.body.setAttribute("data-theme", theme);
+    localStorage.setItem("chatTheme", theme);
+  }, [theme]);
 
   useEffect(() => {
     // auto-scroll to bottom when current conversation messages change
@@ -178,16 +259,107 @@ function Chat() {
     navigate("/");
   };
 
+  const handleThemeToggle = () => {
+    setTheme((prevTheme) => (prevTheme === "dark" ? "light" : "dark"));
+  };
+
+  const handleProfileFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropImageSrc(reader.result || "");
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setCropOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCropComplete = (_, croppedPixels) => {
+    setCroppedAreaPixels(croppedPixels);
+  };
+
+  const handleApplyCrop = async () => {
+    if (!cropImageSrc || !croppedAreaPixels) return;
+
+    const croppedImage = await getCroppedImage(cropImageSrc, croppedAreaPixels);
+
+    setSettingsForm((prev) => ({
+      ...prev,
+      profilePic: croppedImage,
+    }));
+
+    setCropOpen(false);
+    setCropImageSrc("");
+  };
+
+  const handleRemovePhoto = () => {
+    setSettingsForm((prev) => ({
+      ...prev,
+      profilePic: "",
+    }));
+  };
+
+  const handleSaveSettings = async () => {
+    const authHeaders = token
+      ? {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      : undefined;
+
+    setProfileSaving(true);
+    setSettingsError("");
+
+    try {
+      const res = await axios.put(
+        "http://localhost:5000/api/users/profile",
+        {
+          profilePic: settingsForm.profilePic,
+        },
+        authHeaders
+      );
+
+      const updatedUser = {
+        ...currentUser,
+        ...res.data,
+      };
+
+      setCurrentUser(updatedUser);
+      localStorage.setItem("userInfo", JSON.stringify(updatedUser));
+      socket.emit("profile_updated", updatedUser);
+      setSettingsOpen(false);
+    } catch (error) {
+      setSettingsError(error?.response?.data?.message || "Unable to save settings");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
   return (
     <div className="chat-container">
       <aside className="sidebar">
         <div className="sidebar-header">
           <div>
             <div className="eyebrow">Chats</div>
-            <h3>{currentUserName}</h3>
-            <div className="sidebar-subtitle">You are logged in as</div>
+            <div className="sidebar-profile">
+              {currentUserAvatar ? (
+                <img src={currentUserAvatar} alt={currentUserName} className="sidebar-profile-pic" />
+              ) : (
+                <div className="sidebar-profile-fallback">{(currentUserName || "?").slice(0, 1)}</div>
+              )}
+              <div>
+                <h3>{currentUserName}</h3>
+                <div className="sidebar-subtitle">You are logged in as</div>
+              </div>
+            </div>
           </div>
-          <div className="sidebar-count">{users.filter((u) => u.name.toLowerCase().includes(userSearch.toLowerCase())).length}</div>
+          <button type="button" className="sidebar-settings-chip" onClick={openSettings}>
+            Settings
+          </button>
         </div>
 
         <input
@@ -247,11 +419,23 @@ function Chat() {
           <div className="chat-header-row">
             <div>
               <div className="eyebrow">Signed in as</div>
-              <h2>{currentUserName}</h2>
+              <div className="chat-user-row">
+                {currentUserAvatar ? (
+                  <img src={currentUserAvatar} alt={currentUserName} className="chat-avatar" />
+                ) : (
+                  <div className="chat-avatar chat-avatar-fallback">{(currentUserName || "?").slice(0, 1)}</div>
+                )}
+                <h2>{currentUserName}</h2>
+              </div>
             </div>
-            <button type="button" className="logout-btn" onClick={handleLogout}>
-              Logout
-            </button>
+            <div className="header-actions">
+              <button type="button" className="settings-btn" onClick={openSettings}>
+                Settings
+              </button>
+              <button type="button" className="logout-btn" onClick={handleLogout}>
+                Logout
+              </button>
+            </div>
           </div>
           <div className="chat-subtitle">
             {selectedUser ? `Chatting with ${selectedUser.name}` : "Pick someone on the left to start the conversation"}
@@ -302,6 +486,121 @@ function Chat() {
           </button>
         </div>
       </main>
+
+      {settingsOpen && (
+        <div className="settings-overlay" role="presentation" onClick={() => setSettingsOpen(false)}>
+          <div className="settings-modal" role="dialog" aria-modal="true" aria-label="Settings" onClick={(event) => event.stopPropagation()}>
+            <div className="settings-header">
+              <div>
+                <div className="eyebrow">Preferences</div>
+                <h3>Settings</h3>
+              </div>
+              <button type="button" className="settings-close" onClick={() => setSettingsOpen(false)}>
+                ×
+              </button>
+            </div>
+
+            <div className="settings-section">
+              <div className="settings-label">Profile picture</div>
+              <div className="settings-avatar-row">
+                {settingsForm.profilePic ? (
+                  <img src={settingsForm.profilePic} alt="Profile preview" className="settings-avatar" />
+                ) : (
+                  <div className="settings-avatar settings-avatar-fallback">{(currentUserName || "?").slice(0, 1)}</div>
+                )}
+                <div className="settings-actions">
+                  <button type="button" className="settings-secondary-btn" onClick={() => profileFileInputRef.current?.click()}>
+                    Change photo
+                  </button>
+                  <input
+                    ref={profileFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden-file-input"
+                    onChange={handleProfileFileChange}
+                  />
+                  <div className="settings-help">Crop your photo before saving. The final image is stored in the database.</div>
+                  {settingsForm.profilePic && (
+                    <button type="button" className="settings-link-btn" onClick={handleRemovePhoto}>
+                      Remove photo
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <div className="settings-label">Theme</div>
+              <button type="button" className="theme-toggle" onClick={handleThemeToggle}>
+                <span>{theme === "dark" ? "Dark mode on" : "Light mode on"}</span>
+                <span className="theme-pill">{theme === "dark" ? "Dark" : "Light"}</span>
+              </button>
+            </div>
+
+            {settingsError && <div className="settings-error">{settingsError}</div>}
+
+            <div className="settings-footer">
+              <button type="button" className="settings-secondary-btn" onClick={() => setSettingsOpen(false)}>
+                Cancel
+              </button>
+              <button type="button" className="settings-save-btn" onClick={handleSaveSettings} disabled={profileSaving}>
+                {profileSaving ? "Saving..." : "Save changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cropOpen && (
+        <div className="settings-overlay crop-overlay" role="presentation" onClick={() => setCropOpen(false)}>
+          <div className="settings-modal crop-modal" role="dialog" aria-modal="true" aria-label="Crop image" onClick={(event) => event.stopPropagation()}>
+            <div className="settings-header">
+              <div>
+                <div className="eyebrow">Crop photo</div>
+                <h3>Adjust your profile picture</h3>
+              </div>
+              <button type="button" className="settings-close" onClick={() => setCropOpen(false)}>
+                ×
+              </button>
+            </div>
+
+            <div className="crop-stage">
+              <Cropper
+                image={cropImageSrc}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                cropShape="round"
+                showGrid={false}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={handleCropComplete}
+              />
+            </div>
+
+            <label className="zoom-control">
+              <span>Zoom</span>
+              <input
+                type="range"
+                min="1"
+                max="3"
+                step="0.01"
+                value={zoom}
+                onChange={(event) => setZoom(Number(event.target.value))}
+              />
+            </label>
+
+            <div className="settings-footer">
+              <button type="button" className="settings-secondary-btn" onClick={() => setCropOpen(false)}>
+                Cancel
+              </button>
+              <button type="button" className="settings-save-btn" onClick={handleApplyCrop}>
+                Apply crop
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
