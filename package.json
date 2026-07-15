@@ -2,15 +2,22 @@
   "name": "chat-app",
   "version": "1.0.0",
   "description": "Real-time chat application",
+  "main": "electron/main.js",
   "type": "module",
   "scripts": {
     "client": "cd client && npm run dev",
     "server": "cd server && npm start",
-    "dev": "concurrently \"npm run server\" \"npm run client\""
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "electron": "electron .",
+    "desktop": "concurrently \"npm run server\" \"npm run client\" \"wait-on http://localhost:5173 && electron .\""
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",
     "concurrently": "^7.6.0",
     "tailwindcss": "^4.3.0"
+  },
+  "devDependencies": {
+    "electron": "^37.10.3",
+    "wait-on": "^8.0.5"
   }
 }
