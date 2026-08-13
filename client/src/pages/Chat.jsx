@@ -60,9 +60,11 @@ function Chat() {
   const [userSearch, setUserSearch] = useState("");
   const [currentUser, setCurrentUser] = useState(getStoredUserInfo);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [settingsError, setSettingsError] = useState("");
   const [settingsForm, setSettingsForm] = useState({
+    name: "",
     profilePic: "",
   });
   const [theme, setTheme] = useState(() => localStorage.getItem("chatTheme") || "dark");
@@ -205,11 +207,17 @@ function Chat() {
   }, [selectedUser]);
 
   const openSettings = () => {
+    setSettingsError("");
+    setSettingsOpen(true);
+  };
+
+  const openProfile = () => {
     setSettingsForm({
+      name: currentUser.name || "",
       profilePic: currentUser.profilePic || "",
     });
     setSettingsError("");
-    setSettingsOpen(true);
+    setProfileOpen(true);
   };
 
   useEffect(() => {
@@ -303,6 +311,13 @@ function Chat() {
   };
 
   const handleSaveSettings = async () => {
+    const trimmedName = settingsForm.name.trim();
+
+    if (!trimmedName) {
+      setSettingsError("Please enter your name");
+      return;
+    }
+
     const authHeaders = token
       ? {
           headers: {
@@ -318,6 +333,7 @@ function Chat() {
       const res = await axios.put(
         "http://localhost:5000/api/users/profile",
         {
+          name: trimmedName,
           profilePic: settingsForm.profilePic,
         },
         authHeaders
@@ -331,7 +347,7 @@ function Chat() {
       setCurrentUser(updatedUser);
       localStorage.setItem("userInfo", JSON.stringify(updatedUser));
       socket.emit("profile_updated", updatedUser);
-      setSettingsOpen(false);
+      setProfileOpen(false);
     } catch (error) {
       setSettingsError(error?.response?.data?.message || "Unable to save settings");
     } finally {
@@ -342,118 +358,135 @@ function Chat() {
   return (
     <div className="chat-container">
       <aside className="sidebar">
-        <div className="sidebar-header">
-          <div>
-            <div className="eyebrow">Chats</div>
-            <div className="sidebar-profile">
-              {currentUserAvatar ? (
-                <img src={currentUserAvatar} alt={currentUserName} className="sidebar-profile-pic" />
-              ) : (
-                <div className="sidebar-profile-fallback">{(currentUserName || "?").slice(0, 1)}</div>
-              )}
-              <div>
-                <h3>{currentUserName}</h3>
-                <div className="sidebar-subtitle">You are logged in as</div>
-              </div>
+        <div className="sidebar-top">
+          <div className="sidebar-toolbar">
+            <div className="sidebar-brand">
+              <span className="sidebar-brand-mark">C</span>
+              <span>Chat App</span>
             </div>
           </div>
-          <button type="button" className="sidebar-settings-chip" onClick={openSettings}>
-            Settings
+
+          <button type="button" className="new-chat-button" onClick={() => setSelectedUser(null)}>
+            <span aria-hidden="true">+</span>
+            New chat
           </button>
+
+          <div className="user-search-wrap">
+            <span aria-hidden="true">&#128269;</span>
+            <input
+              aria-label="Search users"
+              className="user-search"
+              placeholder="Search chats"
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+            />
+          </div>
         </div>
 
-        <input
-          aria-label="Search users"
-          className="user-search"
-          placeholder="Search users..."
-          value={userSearch}
-          onChange={(e) => setUserSearch(e.target.value)}
-        />
-
-        {usersLoading && (
-          <div>
-            <div className="user-skeleton" />
-            <div className="user-skeleton" />
-            <div className="user-skeleton" />
-          </div>
-        )}
-
-        {!usersLoading && users.length === 0 && <p className="muted">No users available</p>}
-
-        {users
-          .filter((u) => u.name.toLowerCase().includes(userSearch.toLowerCase()))
-          .map((user) => (
-            <div
-              key={user._id}
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                setSelectedUser(user);
-
-                setNotifications((prev) => ({
-                  ...prev,
-                  [user._id]: 0,
-                }));
-              }}
-              className={`user-item ${selectedUser?._id === user._id ? "selected" : ""}`}
-            >
-              <div className="user-row">
-                <div className="avatar">
-                  <span className="initials">{(user.name || "?").slice(0, 1)}</span>
-                  <span className={`presence ${onlineUsersState[user._id] ? "online" : "offline"}`} />
-                </div>
-                <div className="user-meta">
-                  <div className="user-name">{user.name}</div>
-                </div>
-
-                {notifications[user._id] > 0 && (
-                  <span className="notify-badge">{notifications[user._id]}</span>
-                )}
-              </div>
+        <div className="user-list">
+          {usersLoading && (
+            <div>
+              <div className="user-skeleton" />
+              <div className="user-skeleton" />
+              <div className="user-skeleton" />
             </div>
-          ))}
+          )}
+
+          {!usersLoading && users.length === 0 && <p className="muted">No chats yet</p>}
+
+          {users
+            .filter((u) => u.name.toLowerCase().includes(userSearch.toLowerCase()))
+            .map((user) => (
+              <div
+                key={user._id}
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  setSelectedUser(user);
+
+                  setNotifications((prev) => ({
+                    ...prev,
+                    [user._id]: 0,
+                  }));
+                }}
+                className={`user-item ${selectedUser?._id === user._id ? "selected" : ""}`}
+              >
+                <div className="user-row">
+                  <div className="avatar">
+                    {user.profilePic ? (
+                      <img src={user.profilePic} alt="" className="user-avatar-image" />
+                    ) : (
+                      <span className="initials">{(user.name || "?").slice(0, 1)}</span>
+                    )}
+                    <span className={`presence ${onlineUsersState[user._id] ? "online" : "offline"}`} />
+                  </div>
+                  <div className="user-meta">
+                    <div className="user-name">{user.name}</div>
+                    <div className="user-status">{onlineUsersState[user._id] ? "Online" : "Offline"}</div>
+                  </div>
+
+                  {notifications[user._id] > 0 && (
+                    <span className="notify-badge">{notifications[user._id]}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+        </div>
+
+        <div className="sidebar-footer">
+          <button type="button" className="sidebar-account" onClick={openProfile}>
+            {currentUserAvatar ? (
+              <img src={currentUserAvatar} alt={currentUserName} className="sidebar-profile-pic" />
+            ) : (
+              <span className="sidebar-profile-fallback">{(currentUserName || "?").slice(0, 1)}</span>
+            )}
+            <span className="sidebar-account-copy">
+              <strong>{currentUserName}</strong>
+              <small>Edit profile</small>
+            </span>
+          </button>
+          <button type="button" className="sidebar-icon-button" aria-label="Settings" title="Settings" onClick={openSettings}>
+            &#9881;
+          </button>
+        </div>
       </aside>
 
       <main className="chat-window">
         <header className="chat-header">
           <div className="chat-header-row">
-            <div>
-              <div className="eyebrow">Signed in as</div>
-              <div className="chat-user-row">
-                {currentUserAvatar ? (
-                  <img src={currentUserAvatar} alt={currentUserName} className="chat-avatar" />
-                ) : (
-                  <div className="chat-avatar chat-avatar-fallback">{(currentUserName || "?").slice(0, 1)}</div>
-                )}
-                <h2>{currentUserName}</h2>
-              </div>
+            <div className="conversation-heading">
+              {selectedUser ? (
+                <>
+                  <div className="chat-avatar chat-avatar-fallback">{(selectedUser.name || "?").slice(0, 1)}</div>
+                  <div>
+                    <h2>{selectedUser.name}</h2>
+                    <div className="chat-subtitle">{onlineUsersState[selectedUser._id] ? "Online" : "Offline"}</div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="chat-app-symbol">C</div>
+                  <div>
+                    <h2>Chat App</h2>
+                    <div className="chat-subtitle">Your private conversations</div>
+                  </div>
+                </>
+              )}
             </div>
-            <div className="header-actions">
-              <button type="button" className="settings-btn" onClick={openSettings}>
-                Settings
-              </button>
-              <button type="button" className="logout-btn" onClick={handleLogout}>
-                Logout
-              </button>
-            </div>
-          </div>
-          <div className="chat-subtitle">
-            {selectedUser ? `Chatting with ${selectedUser.name}` : "Pick someone on the left to start the conversation"}
           </div>
         </header>
 
         <section className="messages" aria-live="polite">
           {!selectedUser && (
             <div className="empty-chat-state">
-              <div className="empty-chat-title">No conversation selected</div>
-              <div className="empty-chat-copy">Select a user from the sidebar to load the thread.</div>
+              <div className="empty-chat-copy">Choose a chat from the sidebar or search for someone to message.</div>
             </div>
           )}
 
           {selectedUser && (messagesByUser[selectedUser._id] || []).length === 0 && (
             <div className="empty-chat-state">
-              <div className="empty-chat-title">Say hello</div>
-              <div className="empty-chat-copy">This conversation is empty. Send the first message.</div>
+              <div className="empty-chat-symbol">{(selectedUser.name || "?").slice(0, 1)}</div>
+              <div className="empty-chat-copy">This is the beginning of your conversation.</div>
             </div>
           )}
 
@@ -501,6 +534,46 @@ function Chat() {
             </div>
 
             <div className="settings-section">
+              <div className="settings-label">Theme</div>
+              <button type="button" className="theme-toggle" onClick={handleThemeToggle}>
+                <span>{theme === "dark" ? "Dark mode on" : "Light mode on"}</span>
+                <span className="theme-pill">{theme === "dark" ? "Dark" : "Light"}</span>
+              </button>
+            </div>
+
+            <div className="settings-section account-settings-section">
+              <div className="settings-label">Account</div>
+              <button type="button" className="sign-out-button" onClick={handleLogout}>
+                Sign out
+              </button>
+            </div>
+
+            <div className="settings-footer">
+              <button type="button" className="settings-secondary-btn" onClick={() => setSettingsOpen(false)}>
+                Cancel
+              </button>
+              <button type="button" className="settings-save-btn" onClick={handleSaveSettings} disabled={profileSaving}>
+                {profileSaving ? "Saving..." : "Save changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {profileOpen && (
+        <div className="settings-overlay" role="presentation" onClick={() => setProfileOpen(false)}>
+          <div className="settings-modal" role="dialog" aria-modal="true" aria-label="Edit profile" onClick={(event) => event.stopPropagation()}>
+            <div className="settings-header">
+              <div>
+                <div className="eyebrow">Your account</div>
+                <h3>Edit profile</h3>
+              </div>
+              <button type="button" className="settings-close" onClick={() => setProfileOpen(false)}>
+                Ã—
+              </button>
+            </div>
+
+            <div className="settings-section">
               <div className="settings-label">Profile picture</div>
               <div className="settings-avatar-row">
                 {settingsForm.profilePic ? (
@@ -510,7 +583,7 @@ function Chat() {
                 )}
                 <div className="settings-actions">
                   <button type="button" className="settings-secondary-btn" onClick={() => profileFileInputRef.current?.click()}>
-                    Change photo
+                    Add or change photo
                   </button>
                   <input
                     ref={profileFileInputRef}
@@ -530,21 +603,25 @@ function Chat() {
             </div>
 
             <div className="settings-section">
-              <div className="settings-label">Theme</div>
-              <button type="button" className="theme-toggle" onClick={handleThemeToggle}>
-                <span>{theme === "dark" ? "Dark mode on" : "Light mode on"}</span>
-                <span className="theme-pill">{theme === "dark" ? "Dark" : "Light"}</span>
-              </button>
+              <label className="settings-label" htmlFor="profile-name">Display name</label>
+              <input
+                id="profile-name"
+                className="settings-input"
+                type="text"
+                value={settingsForm.name}
+                onChange={(event) => setSettingsForm((prev) => ({ ...prev, name: event.target.value }))}
+                autoComplete="name"
+              />
             </div>
 
             {settingsError && <div className="settings-error">{settingsError}</div>}
 
             <div className="settings-footer">
-              <button type="button" className="settings-secondary-btn" onClick={() => setSettingsOpen(false)}>
+              <button type="button" className="settings-secondary-btn" onClick={() => setProfileOpen(false)}>
                 Cancel
               </button>
               <button type="button" className="settings-save-btn" onClick={handleSaveSettings} disabled={profileSaving}>
-                {profileSaving ? "Saving..." : "Save changes"}
+                {profileSaving ? "Saving..." : "Save profile"}
               </button>
             </div>
           </div>

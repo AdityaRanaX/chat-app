@@ -50,22 +50,10 @@ function Login() {
   return (
     <div className="auth-page auth-page-login">
       <div className="auth-card-shell">
-        <section className="auth-info-panel auth-info-panel-login">
-          <div className="brand-pill">Chat App</div>
-          <h1>Welcome back</h1>
-          <p>
-            Sign in to jump into private conversations, see who is online, and continue where you left off.
-          </p>
-          <div className="feature-list">
-            <div>Instant chat delivery</div>
-            <div>Live presence and notifications</div>
-            <div>Protected message history</div>
-          </div>
-        </section>
-
         <section className="auth-form-panel">
+          <div className="auth-brand">Chat App</div>
           <div className="auth-eyebrow">Returning user</div>
-          <h2>Login</h2>
+          <h1>Welcome back</h1>
           <p className="auth-subcopy">Use the email and password from your account.</p>
           {noticeMessage && <div className="auth-notice">{noticeMessage}</div>}
 

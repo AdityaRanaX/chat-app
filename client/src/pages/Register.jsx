@@ -50,22 +50,10 @@ function Register() {
   return (
     <div className="auth-page auth-page-register">
       <div className="auth-card-shell">
-        <section className="auth-info-panel auth-info-panel-register">
-          <div className="brand-pill">Chat App</div>
-          <h1>Join the room</h1>
-          <p>
-            Create your account once and keep your conversations, presence, and profile details in sync.
-          </p>
-          <div className="feature-list">
-            <div>Instant real-time chat</div>
-            <div>Presence and notifications</div>
-            <div>Secure private conversations</div>
-          </div>
-        </section>
-
         <section className="auth-form-panel">
+          <div className="auth-brand">Chat App</div>
           <div className="auth-eyebrow">New account</div>
-          <h2>Register</h2>
+          <h1>Create your account</h1>
           <p className="auth-subcopy">Tell us a bit about yourself to get started.</p>
 
           <form className="auth-form" onSubmit={handleSubmit}>
