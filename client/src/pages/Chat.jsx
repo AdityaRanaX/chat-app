@@ -3,6 +3,7 @@ import Cropper from "react-easy-crop";
 import socket from "../socket/socket";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import VivaInspector from "../components/VivaInspector";
 
 const getStoredUserInfo = () => {
   try {
@@ -50,6 +51,7 @@ const getCroppedImage = async (imageSrc, cropPixels) => {
 
 function Chat() {
   const navigate = useNavigate();
+  const [isInspectorOpen, setIsInspectorOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [messagesByUser, setMessagesByUser] = useState({});
   const [users, setUsers] = useState([]);
@@ -648,6 +650,8 @@ function Chat() {
                 zoom={zoom}
                 aspect={1}
                 cropShape="round"
+
+
                 showGrid={false}
                 onCropChange={setCrop}
                 onZoomChange={setZoom}
@@ -678,6 +682,34 @@ function Chat() {
           </div>
         </div>
       )}
+      {/* Floating Viva AI & Architecture Inspector Launcher */}
+      <button
+        type="button"
+        onClick={() => setIsInspectorOpen(true)}
+        style={{
+          position: "fixed",
+          bottom: "24px",
+          right: "24px",
+          zIndex: 9990,
+          background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+          color: "white",
+          border: "1px solid rgba(255, 255, 255, 0.2)",
+          padding: "12px 20px",
+          borderRadius: "9999px",
+          fontWeight: "700",
+          fontSize: "0.9rem",
+          boxShadow: "0 10px 25px -5px rgba(99, 102, 241, 0.5), 0 8px 10px -6px rgba(99, 102, 241, 0.3)",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          transition: "transform 0.2s ease"
+        }}
+      >
+        <span>🎓</span> Viva AI & System Inspector
+      </button>
+
+      <VivaInspector isOpen={isInspectorOpen} onClose={() => setIsInspectorOpen(false)} />
     </div>
   );
 }
