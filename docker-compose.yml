@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # 1. MongoDB Database Service
+  mongo:
+    image: mongo:latest
+    container_name: chat_app_mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  # 2. Redis Cache & Event Bus Service
+  redis:
+    image: redis:alpine
+    container_name: chat_app_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  # 3. Express API + SSR + Multi-Step Agent Server
+  chat-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: chat_app_server
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGO_URI=mongodb://mongo:27017/chatapp
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=viva_secret_key_2026
+    depends_on:
+      - mongo
+      - redis
+
+  # 4. React Client Web Application
+  chat-client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: chat_app_client
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - chat-server
+
+volumes:
+  mongo_data:
